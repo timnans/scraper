@@ -7,6 +7,7 @@ class Scraper
     @response = HTTParty.get('https://www.vanguardngr.com/')
     @document = Nokogiri::HTML(@response.body)
     @links = @document.css('#latest-news-list').css('.rtp-latest-news-title').css('a')
+    @stop_sign = 'Download Vanguard News App'
   end
 
   def append_links
@@ -22,22 +23,21 @@ class Scraper
 
   # for each individual page
   def scrape_appended_links
-    @vanguard_links.each do |single_page|
-      new_link = HTTParty.get(single_page)
-      document = Nokogiri::HTML(new_link.body)
-      File.open('Vanguard News.txt', 'a') do |f|
+    File.open('Vanguard News.txt', 'w') do |f|
+      f.write Time.now.to_s + "\n"
+      @vanguard_links.each do |single_page|
+        new_link = HTTParty.get(single_page)
+        document = Nokogiri::HTML(new_link.body)
+        stop_value_index = document.css('p').find_index { |p| p.text.include?(@stop_sign) }
+        # pry.bindings
         f.write '*************************' + "\n"
-        f.write Time.now.to_s + "\n"
-        f.write document.css('.entry-title').first.text + "\n"
-        f.write document.css('p').text + "\n"
+        f.write document.css('.entry-title').first.text.upcase + "\n"
+        f.write document.css('p')[1..(stop_value_index - 1)].text + "\n"
         f.write '*************************' + "\n"
       end
     end
   end
 
-  # TODO
-  # remove vanguard last vanguard last
-  # remove vangaurd first links
   # send email?
   def news_title
     document.css('.entry-title').first.text
